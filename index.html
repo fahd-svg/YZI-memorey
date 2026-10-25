@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>📖</title>
+<style>
+:root{  
+  color-scheme:dark;
+  --bg:#050505; --gold:#b08d57; --gold-dim:#5c4a2d;
+  --leather:#16110d; --paper:#1b1814; --paper2:#14110e;
+  --w:min(44vw,36vh); --h:calc(var(--w)*1.42);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5vh;
+  background:radial-gradient(ellipse at 50% 40%,#14110d 0%,#050505 70%)}
+*{-webkit-tap-highlight-color:transparent}
+.scene{perspective:2200px;width:calc(var(--w)*2);height:var(--h);display:flex;justify-content:center}
+.tilt{width:calc(var(--w)*2);height:var(--h);transform-style:preserve-3d;will-change:transform}
+.face{cursor:pointer}
+.book{position:relative;width:calc(var(--w)*2);height:var(--h);transform-style:preserve-3d;
+  transition:transform 1.3s cubic-bezier(.45,.05,.2,1);transform:translateX(calc(var(--w)*-.5)) rotateX(8deg);
+  filter:drop-shadow(0 30px 40px rgba(0,0,0,.9))}
+.book.open{transform:translateX(0) rotateX(8deg)}
+.book.end{transform:translateX(calc(var(--w)*.5)) rotateX(8deg)}
+.leaf{position:absolute;left:50%;top:0;width:var(--w);height:var(--h);transform-origin:left center;
+  transform-style:preserve-3d;transition:transform 1.3s cubic-bezier(.45,.05,.2,1)}
+.leaf.flipped{transform:rotateY(-180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+.back{transform:rotateY(180deg)}
+/* paper pages */
+.page{background:
+  radial-gradient(ellipse at 50% 50%,rgba(255,235,200,.04),transparent 70%),
+  linear-gradient(var(--paper),var(--paper2));
+  padding:7% 8%;box-sizing:border-box;border:1px solid #0c0a08}
+.front.page{border-radius:0 6px 6px 0;box-shadow:inset 22px 0 26px -18px #000,inset -2px 0 0 #2a241c}
+.back.page{border-radius:6px 0 0 6px;box-shadow:inset -22px 0 26px -18px #000,inset 2px 0 0 #2a241c}
+/* leather covers */
+.cover{background:
+  repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0 2px,transparent 2px 4px),
+  radial-gradient(ellipse at 30% 25%,#241b14,var(--leather) 60%,#090705);
+  border:1px solid #000;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.front.cover{border-radius:0 10px 10px 0;box-shadow:inset 14px 0 18px -10px #000,inset 0 0 0 7px var(--leather),inset 0 0 0 8px var(--gold-dim);cursor:pointer}
+.back.cover.inside{border-radius:10px 0 0 10px}
+.cover svg{width:55%;opacity:.85}
+.spine-shade{position:absolute;inset:0 auto 0 0;width:14%;background:linear-gradient(90deg,rgba(0,0,0,.7),transparent)}
+/* media slots */
+.slot{position:relative;width:100%;height:100%;border:1px dashed var(--gold-dim);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;
+  background:rgba(0,0,0,.25);transition:border-color .3s,background .3s}
+.slot:hover,.slot.drag{border-color:var(--gold);background:rgba(176,141,87,.07)}
+.add{width:clamp(34px,22%,52px);aspect-ratio:1;border-radius:50%;border:1px solid var(--gold-dim);background:rgba(0,0,0,.4);color:var(--gold-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:.3s}
+.add:hover{color:var(--gold);border-color:var(--gold);transform:scale(1.12)}
+.add svg.plus{width:50%;stroke:currentColor}
+.slot video{cursor:auto}
+.slot.filled{border-style:solid;border-color:#2a241c;cursor:default;background:#000}
+.slot img,.slot video{width:100%;height:100%;object-fit:contain;display:block}
+.del{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:1px solid var(--gold-dim);
+  background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.slot.filled:hover .del,.slot.filled:focus-within .del{display:flex}
+.del svg{width:12px;stroke:var(--gold);stroke-width:2}
+/* middle (spine) hotspot: open / close the whole book */
+.hub{position:absolute;left:calc(50% - var(--w)*.07);top:0;width:calc(var(--w)*.14);height:var(--h);transform:translateZ(3px);cursor:pointer;z-index:99;background:linear-gradient(90deg,transparent,rgba(176,141,87,0),transparent);transition:background .4s}
+.hub:hover{background:linear-gradient(90deg,transparent,rgba(176,141,87,.14),transparent)}
+/* nav */
+.nav{display:flex;gap:18px}
+.nav button{width:46px;height:46px;border-radius:50%;border:1px solid var(--gold-dim);background:#0b0907;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.25s;padding:0}
+.nav button:hover:not(:disabled){border-color:var(--gold);background:#17120d}
+.nav button:disabled{opacity:.25;cursor:default}
+.nav svg{width:20px;stroke:var(--gold);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+<div class="scene"><div class="tilt" id="tilt"><div class="book" id="book"></div></div></div>
+
+<script>
+/* ---- HOW TO PUT YOUR OWN MEDIA ----
+   Click any empty page to choose an image or video from your device (or drag & drop a file onto it).
+   To preload files, add them below, e.g.:  PRELOAD[0] = {type:'image', src:'photo.jpg'};
+   Slot numbers go left page, right page, left page, right page...  (0 = first slot after the cover) */
+const PRELOAD = {};
+
+const PAGE_LEAVES = 4;               // number of inner leaves (each leaf = 2 pages). Change for more pages.
+const N = PAGE_LEAVES + 2;           // + front cover leaf + back cover leaf
+const book = document.getElementById('book');
+const ORNAMENT = `<svg viewBox="0 0 100 100" fill="none" stroke="#b08d57" stroke-width="1.2">
+  <circle cx="50" cy="50" r="42"/><circle cx="50" cy="50" r="36" stroke-width=".6"/>
+  <path d="M50 14v72M14 50h72" stroke-width=".6"/>
+  <path d="M50 22l8 28-8 28-8-28z"/><path d="M22 50l28-8 28 8-28 8z"/><circle cx="50" cy="50" r="4"/></svg>`;
+const PLUS = `<svg class="plus" viewBox="0 0 24 24" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+const X = `<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+let slotId = 0;
+function makeSlot(){
+  const id = slotId++;
+  const slot = document.createElement('div');
+  slot.className = 'slot';
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*,video/*';
+  const reset = () => {
+    slot.className='slot'; slot.innerHTML='';
+    const b = document.createElement('button');
+    b.className='add'; b.setAttribute('aria-label','Add'); b.innerHTML=PLUS;
+    b.onclick = e => { e.stopPropagation(); input.click(); };
+    slot.append(b, input); input.value='';
+  };
+  const fill = (type, src) => {
+    slot.innerHTML = '';
+    slot.className = 'slot filled';
+    const el = document.createElement(type === 'video' ? 'video' : 'img');
+    el.src = src;
+    if (type === 'video'){ el.controls = true; el.playsInline = true; el.loop = true; el.addEventListener('click', e => e.stopPropagation()); }
+    const del = document.createElement('button');
+    del.className = 'del'; del.innerHTML = X; del.setAttribute('aria-label','Remove');
+    del.onclick = e => { e.stopPropagation(); reset(); };
+    slot.append(el, del, input);
+  };
+  const handle = f => {
+    if (!f) return;
+    if (f.type.startsWith('image/')) fill('image', URL.createObjectURL(f));
+    else if (f.type.startsWith('video/')) fill('video', URL.createObjectURL(f));
+  };
+  input.addEventListener('click', e => e.stopPropagation());
+  input.addEventListener('change', () => handle(input.files[0]));
+  slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag'); });
+  slot.addEventListener('dragleave', () => slot.classList.remove('drag'));
+  slot.addEventListener('drop', e => { e.preventDefault(); slot.classList.remove('drag'); handle(e.dataTransfer.files[0]); });
+  reset();
+  if (PRELOAD[id]) fill(PRELOAD[id].type, PRELOAD[id].src);
+  return slot;
+}
+function face(cls, kind){
+  const f = document.createElement('div');
+  f.className = 'face ' + cls + ' ' + kind;
+  return f;
+}
+const leaves = [];
+for (let i = 0; i < N; i++){
+  const leaf = document.createElement('div');
+  leaf.className = 'leaf';
+  const front = face('front', i === 0 ? 'cover' : 'page');
+  const back  = face('back',  i === N-1 ? 'cover' : 'page');
+  if (i === 0){
+    front.innerHTML = ORNAMENT;
+    
+    back.appendChild(makeSlot());
+  } else if (i === N-1){
+    front.appendChild(makeSlot());
+    back.innerHTML = ORNAMENT;
+  } else {
+    front.appendChild(makeSlot());
+    back.appendChild(makeSlot());
+  }
+  if (i === N-1) back.classList.add('cover');
+  front.insertAdjacentHTML('beforeend','<div class="spine-shade"></div>');
+  leaf.append(front, back);
+  book.appendChild(leaf);
+  leaves.push(leaf);
+  const idx = i;
+  leaf.addEventListener('click', () => { cur = leaf.classList.contains('flipped') ? idx : idx + 1; render(); });
+}
+
+const hub = document.createElement('div');
+hub.className = 'hub';
+hub.addEventListener('click', () => {
+  cur = (cur > 0 && cur < N) ? 0 : (cur === 0 ? 1 : N - 1);   // open book -> close it; closed book -> open it
+  render();
+});
+book.appendChild(hub);
+
+let cur = 0, last = 0;
+function render(){
+  book.classList.toggle('open', cur > 0 && cur < N);
+  book.classList.toggle('end', cur === N);
+  leaves.forEach((leaf, i) => {
+    const flipped = i < cur;
+    const was = leaf.classList.contains('flipped');
+    leaf.classList.toggle('flipped', flipped);
+    const z = flipped ? i : N - i;
+    clearTimeout(leaf._t);
+    if (was !== flipped){
+      const rank = cur > last ? i - last : (last - 1) - i;   // pages ripple one after another
+      const delay = Math.max(0, rank) * 90;
+      leaf.style.transitionDelay = delay + 'ms';
+      leaf._t = setTimeout(() => leaf.style.zIndex = z, 600 + delay);
+    } else leaf.style.zIndex = z;
+  });
+  last = cur;
+}
+function go(d){ cur = Math.max(0, Math.min(N, cur + d)); render(); }
+/* soft mouse-follow tilt for a smooth, alive feel */
+const tilt = document.getElementById('tilt');
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  let tx = 0, ty = 0, cx = 0, cy = 0;
+  addEventListener('pointermove', e => { tx = (e.clientX / innerWidth - .5) * 10; ty = (e.clientY / innerHeight - .5) * -6; });
+  (function loop(){
+    cx += (tx - cx) * .06; cy += (ty - cy) * .06;
+    tilt.style.transform = `rotateY(${cx}deg) rotateX(${cy}deg)`;
+    requestAnimationFrame(loop);
+  })();
+}
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'Escape'){ cur = 0; render(); }
+});
+render();
+</script>
+</body>
+</html>
